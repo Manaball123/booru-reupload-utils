@@ -53,7 +53,6 @@ def upload_from_post(client : pybooru.Danbooru, post_info : dict):
                 'tag_string': tag_string,
                 'is_pending' : False
         })
-        print(resp)
         
 
 

@@ -51,8 +51,12 @@ def upload_cb():
             cchar : str = inp[idx]
             while cchar.isnumeric() and idx < len(inp):
                 cchar : str = inp[idx]
+                #there 100% is  a   better way but i just fucking cant rn
+                if not cchar.isnumeric():
+                    break
                 post_id += cchar
                 idx += 1
+            
                 
         else:
             post_id = inp
