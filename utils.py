@@ -1,6 +1,49 @@
 import requests
 import pybooru
 import config
+import time
+import traceback
+
+#TODO: inherit requests.Session
+class DanbooruSession():
+    def __init__(self, url : str = "https://danbooru.donmai.org", auth : dict = None, session : requests.Session = requests.Session()):
+        self.url : str = url
+        self.auth : dict = auth
+        self.session : requests.Session = session
+    
+    def request(self, method : str = "GET", use_auth : bool = False, endpoint = "/posts.json", payload : dict = None):
+        retry = True
+        cur_auth = (self.auth["USERNAME"], self.auth["API_KEY"]) if use_auth and self.auth != None else None
+        resp = None
+        while retry:
+            retry = False
+            try:
+                resp = self.session.request(method, self.url + endpoint, json=payload, auth=cur_auth, verify=False)
+                status_code = resp.status_code
+                #500 Internal Server Error: A database timeout, or some unknown error occurred on the server
+                #502 Bad Gateway: Server cannot currently handle the request, try again later (returned during heavy load)
+                #503 Service Unavailable: Server cannot currently handle the request, try again later (returned during downbooru)
+                if status_code == 500 or status_code == 502 or status_code == 503:
+                    time.sleep(1)
+                    retry = True
+                    print("Server error. Retrying after 1s.")
+                    continue
+                #429 User Throttled: User is throttled, try again later (see help:users for API limits)
+                if status_code == 429:
+                    time.sleep(3)
+                    retry = True
+                    print("API Throttled. Retrying after 3s.")
+                    continue
+            except:
+                print(traceback.format_exc())
+                retry = True
+                time.sleep(3)
+                print("Unknown error. Retrying after 3s.")
+                continue
+        assert resp != None
+        return resp.json()
+
+    
 
 
 def modify_session_attributes(orig_session : requests.Session, attrs : dict) -> requests.Session:
@@ -23,7 +66,9 @@ def annotate_tag_string(tagstring : str, tag_type : str):
         new_str += tag_type + ":" + v + " "
     return new_str
 
-def upload_from_post(client : pybooru.Danbooru, post_info : dict):
+
+
+def upload_from_post(session : DanbooruSession, post_info : dict):
         #annotate potentially new tags
         tag_string = post_info["tag_string_general"] + " "
         tag_string += annotate_tag_string(post_info["tag_string_character"], "character")
@@ -41,18 +86,20 @@ def upload_from_post(client : pybooru.Danbooru, post_info : dict):
                 media_url = v["url"]
         #upload media
         #refactor this ugly shit
-        upload_resp = client.client.post(config.BOORU_DST_URL + "/uploads.json", auth=(config.LOGIN_INFO["DST"]["USERNAME"], config.LOGIN_INFO["DST"]["API_KEY"]), json={
+        upload_resp = session.request("POST", True, "/uploads.json", {
             "source" : media_url
-        }).json()
+        })
         #ughhhhh
-        asset_resp = client.client.get(config.BOORU_DST_URL + "/uploads/" + str(upload_resp["id"]) + ".json", auth=(config.LOGIN_INFO["DST"]["USERNAME"], config.LOGIN_INFO["DST"]["API_KEY"])).json()
+        asset_resp = session.request("GET", True, "/uploads/" + str(upload_resp["id"]) + ".json")
         asset_id = asset_resp["upload_media_assets"][0]["id"]
-        resp = client.client.post(config.BOORU_DST_URL + "/posts.json", auth=(config.LOGIN_INFO["DST"]["USERNAME"], config.LOGIN_INFO["DST"]["API_KEY"]), json={
+        time.sleep(2)
+        session.request("POST", True, "/posts.json", {
                 'upload_media_asset_id' : asset_id,
-                'rating': "s",
+                'rating': post_info["rating"],
                 'tag_string': tag_string,
                 'is_pending' : False
         })
+
         
 
 

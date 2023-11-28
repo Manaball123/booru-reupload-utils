@@ -5,16 +5,15 @@ import traceback
 import requests
 
 src_client : Danbooru = None
-dst_client : Danbooru = None
+dst_session : utils.DanbooruSession = None
 
 
 def init_clients():
     global src_client
-    global dst_client
+    global dst_session
     src_client = Danbooru(site_name='danbooru', site_url = config.BOORU_SRC_URL,username=config.LOGIN_INFO["SRC"]["USERNAME"], api_key=config.LOGIN_INFO["SRC"]["API_KEY"])
-    dst_client = Danbooru(site_url = config.BOORU_DST_URL,username=config.LOGIN_INFO["DST"]["USERNAME"], api_key=config.LOGIN_INFO["DST"]["API_KEY"])
+    dst_session = utils.DanbooruSession(url = config.BOORU_DST_URL, auth=config.LOGIN_INFO["DST"], session=utils.modify_session_attributes(requests.Session(), config.REQUEST_SESSION_SETTINGS))
     utils.modify_booru_client_session(src_client, config.REQUEST_SESSION_SETTINGS)
-    utils.modify_booru_client_session(dst_client, config.REQUEST_SESSION_SETTINGS)
 
 
 
@@ -67,7 +66,8 @@ def upload_cb():
             print("Invalid input!")
             continue
         post_info = src_client.post_show(int(post_id))
-        utils.upload_from_post(dst_client, post_info)
+        utils.upload_from_post(dst_session, post_info)
+        print("Uploaded! ")
         
 
 
