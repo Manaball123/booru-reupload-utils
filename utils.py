@@ -1,6 +1,6 @@
 import requests
 import pybooru
-
+import config
 
 
 def modify_session_attributes(orig_session : requests.Session, attrs : dict) -> requests.Session:
@@ -39,8 +39,22 @@ def upload_from_post(client : pybooru.Danbooru, post_info : dict):
         for v in media_asset_info:
             if v["type"] == "original":
                 media_url = v["url"]
-
-        client.upload_create(tag_string, source = media_url, rating = post_info["rating"])
+        #upload media
+        #refactor this ugly shit
+        upload_resp = client.client.post(config.BOORU_DST_URL + "/uploads.json", auth=(config.LOGIN_INFO["DST"]["USERNAME"], config.LOGIN_INFO["DST"]["API_KEY"]), json={
+            "source" : media_url
+        }).json()
+        #ughhhhh
+        asset_resp = client.client.get(config.BOORU_DST_URL + "/uploads/" + str(upload_resp["id"]) + ".json", auth=(config.LOGIN_INFO["DST"]["USERNAME"], config.LOGIN_INFO["DST"]["API_KEY"])).json()
+        asset_id = asset_resp["upload_media_assets"][0]["id"]
+        resp = client.client.post(config.BOORU_DST_URL + "/posts.json", auth=(config.LOGIN_INFO["DST"]["USERNAME"], config.LOGIN_INFO["DST"]["API_KEY"]), json={
+                'upload_media_asset_id' : asset_id,
+                'rating': "s",
+                'tag_string': tag_string,
+                'is_pending' : False
+        })
+        print(resp)
+        
 
 
 

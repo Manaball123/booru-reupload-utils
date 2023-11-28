@@ -2,6 +2,7 @@ from pybooru import Danbooru
 import config
 import utils
 import traceback
+import requests
 
 src_client : Danbooru = None
 dst_client : Danbooru = None
@@ -11,7 +12,7 @@ def init_clients():
     global src_client
     global dst_client
     src_client = Danbooru(site_name='danbooru', site_url = config.BOORU_SRC_URL,username=config.LOGIN_INFO["SRC"]["USERNAME"], api_key=config.LOGIN_INFO["SRC"]["API_KEY"])
-    dst_client = Danbooru(site_name='danbooru', site_url = config.BOORU_DST_URL,username=config.LOGIN_INFO["DST"]["USERNAME"], api_key=config.LOGIN_INFO["DST"]["API_KEY"])
+    dst_client = Danbooru(site_url = config.BOORU_DST_URL,username=config.LOGIN_INFO["DST"]["USERNAME"], api_key=config.LOGIN_INFO["DST"]["API_KEY"])
     utils.modify_booru_client_session(src_client, config.REQUEST_SESSION_SETTINGS)
     utils.modify_booru_client_session(dst_client, config.REQUEST_SESSION_SETTINGS)
 
@@ -56,15 +57,14 @@ def upload_cb():
         else:
             post_id = inp
         #grab post and upload
+        try:
+            int(post_id)
+        except:
+            print("Invalid input!")
+            continue
         post_info = src_client.post_show(int(post_id))
         utils.upload_from_post(dst_client, post_info)
         
-
-
-
-        
-        
-
 
 
 
@@ -79,6 +79,7 @@ command_callbacks = {
 
 def main():
     init_clients()
+
     while True:
         in_cmd = input("Enter command: ")
         try:

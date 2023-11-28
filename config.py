@@ -21,6 +21,6 @@ BOORU_DST_URL = ""
 REQUEST_SESSION_SETTINGS = {
     "proxies" : {
         "http" : "http://localhost:7890",
-        "https" : "http:/localhost:7890"
+        "https" : "http://localhost:7890"
     }
 }
