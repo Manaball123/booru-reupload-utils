@@ -1,19 +1,17 @@
-from pybooru import Danbooru
+
 import config
 import utils
 import traceback
 import requests
 
-src_client : Danbooru = None
 dst_session : utils.DanbooruSession = None
-
+src_session : utils.DanbooruSession = None
 
 def init_clients():
-    global src_client
+    global src_session
     global dst_session
-    src_client = Danbooru(site_name='danbooru', site_url = config.BOORU_SRC_URL,username=config.LOGIN_INFO["SRC"]["USERNAME"], api_key=config.LOGIN_INFO["SRC"]["API_KEY"])
+    src_session = utils.DanbooruSession(url = config.BOORU_SRC_URL, auth=config.LOGIN_INFO["SRC"], session=utils.modify_session_attributes(requests.Session(), config.REQUEST_SESSION_SETTINGS))
     dst_session = utils.DanbooruSession(url = config.BOORU_DST_URL, auth=config.LOGIN_INFO["DST"], session=utils.modify_session_attributes(requests.Session(), config.REQUEST_SESSION_SETTINGS))
-    utils.modify_booru_client_session(src_client, config.REQUEST_SESSION_SETTINGS)
 
 
 
@@ -34,8 +32,8 @@ def scrape_cb():
 
 
 def upload_cb():
-    global src_client
-    global dst_client
+    global src_session
+    global dst_session
     print("Enter post id/link to upload, enter q to quit...")
     while True:
         inp = input("Input: ")
@@ -65,7 +63,7 @@ def upload_cb():
         except:
             print("Invalid input!")
             continue
-        post_info = src_client.post_show(int(post_id))
+        post_info = src_session.get_post(int(post_id))
         utils.upload_from_post(dst_session, post_info)
         print("Uploaded! ")
         
@@ -86,10 +84,12 @@ def main():
 
     while True:
         in_cmd = input("Enter command: ")
-        try:
-            command_callbacks[in_cmd]()   
-        except KeyError:
+        if not in_cmd in command_callbacks:
             print("Invalid command!")
+            continue
+        
+        command_callbacks[in_cmd]()   
+        
 
 
     

@@ -1,5 +1,4 @@
 import requests
-import pybooru
 import config
 import time
 import traceback
@@ -34,6 +33,7 @@ class DanbooruSession():
                     retry = True
                     print("API Throttled. Retrying after 3s.")
                     continue
+
             except:
                 print(traceback.format_exc())
                 retry = True
@@ -41,8 +41,17 @@ class DanbooruSession():
                 print("Unknown error. Retrying after 3s.")
                 continue
         assert resp != None
-        return resp.json()
+        resp_obj = resp.json()
+        return resp_obj
+    def get_post(self, post_id : int, use_auth : bool = False):
+        return self.request(endpoint="/posts/" + str(post_id) + ".json", use_auth=use_auth)
 
+    def query_posts(self, query_tags : str, use_auth : bool = False, num_posts : int = 20, page_num : int = 1):
+        return self.request(use_auth=use_auth, json={
+            "limit" : num_posts,
+            "tags" : query_tags,
+            "page" : page_num
+        })
     
 
 
@@ -51,11 +60,6 @@ def modify_session_attributes(orig_session : requests.Session, attrs : dict) -> 
     for k in attrs.keys():
         setattr(orig_session, k, attrs[k])
     return orig_session
-
-
-def modify_booru_client_session(client : pybooru.Danbooru, attrs : dict) -> pybooru.Danbooru:
-    modify_session_attributes(client.client, attrs)
-    return client
 
 
 
