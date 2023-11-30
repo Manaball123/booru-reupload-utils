@@ -3,6 +3,7 @@ import config
 import utils
 import traceback
 import requests
+import urllib3
 
 dst_session : utils.DanbooruSession = None
 src_session : utils.DanbooruSession = None
@@ -27,7 +28,19 @@ def print_help():
     
 
 def scrape_cb():
-    pass
+    global src_session
+    global dst_session
+    #cant be bothered to handle errors here
+    page_start_idx = input("Enter start number of pages(leave blank for 1): ")
+    page_start_idx = int(page_start_idx) if len(page_start_idx) > 0 else 1
+    page_n = input(("Enter number of pages(leave blank for 1): "))
+    page_n = int(page_n) if len(page_n) > 0 else 1
+    tag_string = input("Enter tag string: ")
+    page_range = range(page_start_idx, page_start_idx + page_n)
+    print("Scraping pages: " + str(page_range))
+    utils.start_concurrent_scrape(page_range, tag_string, src_session, dst_session)
+    
+    
 
 
 
@@ -40,32 +53,19 @@ def upload_cb():
         if inp == "q":
             return
 
-        post_id = ""
-        #parse link
-        if "http://" in inp or "https://" in inp:
-            #program crashes when u fuck up, cry about it
-            idx = inp.find("posts/") + len("posts/")
-            cchar : str = inp[idx]
-            while cchar.isnumeric() and idx < len(inp):
-                cchar : str = inp[idx]
-                #there 100% is  a   better way but i just fucking cant rn
-                if not cchar.isnumeric():
-                    break
-                post_id += cchar
-                idx += 1
-            
-                
-        else:
-            post_id = inp
+        post_id = None
         #grab post and upload
         try:
-            int(post_id)
+            if "http://" in inp or "https://" in inp:
+                post_id = utils.get_id_from_url(inp)
+            else:
+                post_id = int(inp)
         except:
             print("Invalid input!")
             continue
+
         post_info = src_session.get_post(int(post_id))
-        utils.upload_from_post(dst_session, post_info)
-        print("Uploaded! ")
+        utils.upload_from_post(dst_session, post_info, "meta:manually_uploaded")
         
 
 
@@ -80,6 +80,7 @@ command_callbacks = {
 
 
 def main():
+    urllib3.disable_warnings()
     init_clients()
 
     while True:
